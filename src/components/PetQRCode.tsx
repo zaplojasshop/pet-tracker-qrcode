@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import type { PetInfo } from "./PetForm";
 import { saveAs } from 'file-saver';
 import jsPDF from 'jspdf';
-import { Drawing } from 'dxf-writer';
+import Drawing from 'dxf-writer';
 import {
   Select,
   SelectContent,
