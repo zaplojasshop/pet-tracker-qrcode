@@ -37,6 +37,11 @@ export const PetQRCode = ({ petInfo, onReset, onEdit }: PetQRCodeProps) => {
 
   const handleDelete = async () => {
     try {
+      if (!petInfo.id) {
+        toast.error("ID do pet não encontrado");
+        return;
+      }
+
       const { error } = await supabase
         .from('pets')
         .delete()
