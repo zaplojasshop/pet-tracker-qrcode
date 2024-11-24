@@ -5,6 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MessageCircle, MapPin, AlertCircle } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { LocationHistory } from "@/components/LocationHistory";
+import { formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface Location {
   latitude: number | null;
@@ -63,6 +66,11 @@ const PetInfo = () => {
             locations: [...prev.locations, newLocation]
           }));
 
+          toast({
+            title: "Localização obtida com sucesso",
+            description: `${newLocation.city}, ${newLocation.country}`,
+          });
+
         } catch (error) {
           toast({
             title: "Erro ao obter localização",
@@ -105,13 +113,11 @@ const PetInfo = () => {
     window.open(whatsappUrl, "_blank");
   };
 
-  const handleMapClick = () => {
-    if (userLocation.latitude && userLocation.longitude) {
-      window.open(
-        `https://www.google.com/maps?q=${userLocation.latitude},${userLocation.longitude}`,
-        "_blank"
-      );
-    }
+  const handleMapClick = (lat: number, lon: number) => {
+    window.open(
+      `https://www.google.com/maps?q=${lat},${lon}`,
+      "_blank"
+    );
   };
 
   return (
@@ -163,8 +169,14 @@ const PetInfo = () => {
                   <p className="text-lg">
                     {userLocation.city}, {userLocation.country}
                   </p>
+                  <p className="text-sm text-muted-foreground">
+                    {formatDistanceToNow(new Date(userLocation.timestamp), {
+                      addSuffix: true,
+                      locale: ptBR,
+                    })}
+                  </p>
                   <Button
-                    onClick={handleMapClick}
+                    onClick={() => handleMapClick(userLocation.latitude!, userLocation.longitude!)}
                     variant="outline"
                     className="w-full mt-2"
                   >
@@ -174,6 +186,14 @@ const PetInfo = () => {
                 </div>
               )}
             </div>
+
+            {locationHistory.locations.length > 1 && (
+              <LocationHistory
+                locations={locationHistory.locations}
+                onMapClick={handleMapClick}
+              />
+            )}
+
             <Button
               onClick={handleWhatsAppClick}
               className="w-full bg-green-500 hover:bg-green-600 h-12 text-lg"
