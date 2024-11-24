@@ -12,6 +12,7 @@ export interface PetInfo {
   address: string;
   phone: string;
   notes: string;
+  qr_id?: string;
 }
 
 interface PetFormProps {
@@ -51,7 +52,11 @@ export const PetForm = ({ onSubmit }: PetFormProps) => {
 
       if (error) throw error;
 
-      onSubmit(formData);
+      // Pass the qr_id from the response to the parent component
+      onSubmit({
+        ...formData,
+        qr_id: data.qr_id
+      });
       toast.success("QR Code gerado com sucesso!");
     } catch (error) {
       console.error('Erro ao salvar:', error);
