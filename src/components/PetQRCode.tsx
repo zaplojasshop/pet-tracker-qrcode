@@ -8,7 +8,10 @@ interface PetQRCodeProps {
 }
 
 export const PetQRCode = ({ petInfo, onReset }: PetQRCodeProps) => {
-  const qrData = JSON.stringify(petInfo);
+  const baseUrl = window.location.origin;
+  const encodedData = encodeURIComponent(JSON.stringify(petInfo));
+  const qrUrl = `${baseUrl}/pet-info?data=${encodedData}`;
+
   const downloadQRCode = () => {
     const svg = document.getElementById("qr-code");
     if (svg) {
@@ -36,7 +39,7 @@ export const PetQRCode = ({ petInfo, onReset }: PetQRCodeProps) => {
       <div className="flex justify-center">
         <QRCodeSVG
           id="qr-code"
-          value={qrData}
+          value={qrUrl}
           size={256}
           level="H"
           includeMargin
