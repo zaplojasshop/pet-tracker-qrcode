@@ -12,6 +12,7 @@ export interface PetInfo {
   address: string;
   phone: string;
   notes: string;
+  reward?: number;
   qr_id?: string;
   id?: string;
 }
@@ -29,6 +30,7 @@ export const PetForm = ({ onSubmit, initialData, isEditing = false }: PetFormPro
     address: "",
     phone: "",
     notes: "",
+    reward: 0,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -49,7 +51,8 @@ export const PetForm = ({ onSubmit, initialData, isEditing = false }: PetFormPro
             owner_name: formData.ownerName,
             address: formData.address,
             phone: formData.phone,
-            notes: formData.notes
+            notes: formData.notes,
+            reward: formData.reward || 0
           })
           .eq('id', formData.id)
           .select()
@@ -69,7 +72,8 @@ export const PetForm = ({ onSubmit, initialData, isEditing = false }: PetFormPro
             owner_name: formData.ownerName,
             address: formData.address,
             phone: formData.phone,
-            notes: formData.notes
+            notes: formData.notes,
+            reward: formData.reward || 0
           })
           .select()
           .single();
@@ -131,6 +135,19 @@ export const PetForm = ({ onSubmit, initialData, isEditing = false }: PetFormPro
           onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
           placeholder="Ex: (11) 99999-9999"
           required
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="reward">Recompensa (R$)</Label>
+        <Input
+          id="reward"
+          type="number"
+          min="0"
+          step="0.01"
+          value={formData.reward || 0}
+          onChange={(e) => setFormData({ ...formData, reward: parseFloat(e.target.value) || 0 })}
+          placeholder="Ex: 100.00"
         />
       </div>
 

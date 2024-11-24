@@ -37,7 +37,8 @@ export const PetList = ({ onEdit }: PetListProps) => {
         ownerName: pet.owner_name,
         address: pet.address || '',
         phone: pet.phone,
-        notes: pet.notes || ''
+        notes: pet.notes || '',
+        reward: pet.reward || 0
       })));
     } catch (error) {
       console.error('Erro ao carregar pets:', error);
@@ -73,19 +74,20 @@ export const PetList = ({ onEdit }: PetListProps) => {
               <TableHead>Pet</TableHead>
               <TableHead>Tutor</TableHead>
               <TableHead>Telefone</TableHead>
+              <TableHead>Recompensa</TableHead>
               <TableHead>Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center">
+                <TableCell colSpan={5} className="text-center">
                   Carregando...
                 </TableCell>
               </TableRow>
             ) : filteredPets.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center">
+                <TableCell colSpan={5} className="text-center">
                   Nenhum pet encontrado
                 </TableCell>
               </TableRow>
@@ -95,6 +97,9 @@ export const PetList = ({ onEdit }: PetListProps) => {
                   <TableCell>{pet.petName}</TableCell>
                   <TableCell>{pet.ownerName}</TableCell>
                   <TableCell>{pet.phone}</TableCell>
+                  <TableCell>
+                    {pet.reward ? `R$ ${pet.reward.toFixed(2)}` : '-'}
+                  </TableCell>
                   <TableCell>
                     <Button
                       variant="outline"

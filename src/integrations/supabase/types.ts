@@ -19,6 +19,7 @@ export type Database = {
           pet_name: string
           phone: string
           qr_id: string
+          reward: number | null
           updated_at: string
         }
         Insert: {
@@ -30,6 +31,7 @@ export type Database = {
           pet_name: string
           phone: string
           qr_id?: string
+          reward?: number | null
           updated_at?: string
         }
         Update: {
@@ -41,6 +43,7 @@ export type Database = {
           pet_name?: string
           phone?: string
           qr_id?: string
+          reward?: number | null
           updated_at?: string
         }
         Relationships: []
