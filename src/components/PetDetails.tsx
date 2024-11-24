@@ -21,6 +21,15 @@ export const PetDetails = ({ petInfo, userLocation, onWhatsAppClick, onMapClick 
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6 p-6">
+        {petInfo.reward > 0 && (
+          <div className="bg-green-50 border-2 border-green-500 rounded-lg p-4 text-center animate-pulse">
+            <h3 className="text-xl font-bold text-green-700 mb-1">Recompensa</h3>
+            <p className="text-2xl font-bold text-green-600">
+              R$ {petInfo.reward.toFixed(2)}
+            </p>
+          </div>
+        )}
+
         <div className="grid gap-4">
           <div className="space-y-2">
             <h3 className="font-semibold text-primary">Nome do Pet</h3>
