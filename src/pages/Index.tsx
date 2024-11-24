@@ -4,13 +4,20 @@ import { PetQRCode } from "@/components/PetQRCode";
 
 const Index = () => {
   const [petInfo, setPetInfo] = useState<PetInfo | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
 
   const handleSubmit = (data: PetInfo) => {
     setPetInfo(data);
+    setIsEditing(false);
   };
 
   const handleReset = () => {
     setPetInfo(null);
+    setIsEditing(false);
+  };
+
+  const handleEdit = () => {
+    setIsEditing(true);
   };
 
   return (
@@ -24,10 +31,18 @@ const Index = () => {
         </div>
 
         <div className="bg-white rounded-xl shadow-lg p-6">
-          {petInfo ? (
-            <PetQRCode petInfo={petInfo} onReset={handleReset} />
+          {petInfo && !isEditing ? (
+            <PetQRCode 
+              petInfo={petInfo} 
+              onReset={handleReset}
+              onEdit={handleEdit}
+            />
           ) : (
-            <PetForm onSubmit={handleSubmit} />
+            <PetForm 
+              onSubmit={handleSubmit}
+              initialData={isEditing ? petInfo : undefined}
+              isEditing={isEditing}
+            />
           )}
         </div>
       </div>

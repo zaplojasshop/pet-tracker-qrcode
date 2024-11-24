@@ -13,14 +13,17 @@ export interface PetInfo {
   phone: string;
   notes: string;
   qr_id?: string;
+  id?: string;
 }
 
 interface PetFormProps {
   onSubmit: (data: PetInfo) => void;
+  initialData?: PetInfo;
+  isEditing?: boolean;
 }
 
-export const PetForm = ({ onSubmit }: PetFormProps) => {
-  const [formData, setFormData] = useState<PetInfo>({
+export const PetForm = ({ onSubmit, initialData, isEditing = false }: PetFormProps) => {
+  const [formData, setFormData] = useState<PetInfo>(initialData || {
     petName: "",
     ownerName: "",
     address: "",
@@ -38,29 +41,49 @@ export const PetForm = ({ onSubmit }: PetFormProps) => {
 
     setIsSubmitting(true);
     try {
-      const { data, error } = await supabase
-        .from('pets')
-        .insert({
-          pet_name: formData.petName,
-          owner_name: formData.ownerName,
-          address: formData.address,
-          phone: formData.phone,
-          notes: formData.notes
-        })
-        .select()
-        .single();
+      if (isEditing && formData.id) {
+        const { data, error } = await supabase
+          .from('pets')
+          .update({
+            pet_name: formData.petName,
+            owner_name: formData.ownerName,
+            address: formData.address,
+            phone: formData.phone,
+            notes: formData.notes
+          })
+          .eq('id', formData.id)
+          .select()
+          .single();
 
-      if (error) throw error;
+        if (error) throw error;
+        onSubmit({
+          ...formData,
+          qr_id: data.qr_id
+        });
+        toast.success("Informações atualizadas com sucesso!");
+      } else {
+        const { data, error } = await supabase
+          .from('pets')
+          .insert({
+            pet_name: formData.petName,
+            owner_name: formData.ownerName,
+            address: formData.address,
+            phone: formData.phone,
+            notes: formData.notes
+          })
+          .select()
+          .single();
 
-      // Pass the qr_id from the response to the parent component
-      onSubmit({
-        ...formData,
-        qr_id: data.qr_id
-      });
-      toast.success("QR Code gerado com sucesso!");
+        if (error) throw error;
+        onSubmit({
+          ...formData,
+          qr_id: data.qr_id
+        });
+        toast.success("QR Code gerado com sucesso!");
+      }
     } catch (error) {
       console.error('Erro ao salvar:', error);
-      toast.error("Erro ao gerar QR Code. Tente novamente.");
+      toast.error(isEditing ? "Erro ao atualizar informações." : "Erro ao gerar QR Code. Tente novamente.");
     } finally {
       setIsSubmitting(false);
     }
@@ -123,7 +146,7 @@ export const PetForm = ({ onSubmit }: PetFormProps) => {
       </div>
 
       <Button type="submit" className="w-full" disabled={isSubmitting}>
-        {isSubmitting ? "Gerando..." : "Gerar QR Code"}
+        {isSubmitting ? "Salvando..." : isEditing ? "Salvar Alterações" : "Gerar QR Code"}
       </Button>
     </form>
   );

@@ -10,16 +10,46 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import type { PetInfo } from "./PetForm";
 
 interface PetQRCodeProps {
-  petInfo: PetInfo & { qr_id?: string };
+  petInfo: PetInfo & { qr_id?: string; id?: string };
   onReset: () => void;
+  onEdit: () => void;
 }
 
-export const PetQRCode = ({ petInfo, onReset }: PetQRCodeProps) => {
+export const PetQRCode = ({ petInfo, onReset, onEdit }: PetQRCodeProps) => {
   const baseUrl = window.location.origin;
   const qrUrl = `${baseUrl}/pet-info?qr_id=${petInfo.qr_id}`;
+
+  const handleDelete = async () => {
+    try {
+      const { error } = await supabase
+        .from('pets')
+        .delete()
+        .eq('id', petInfo.id);
+
+      if (error) throw error;
+      toast.success("QR Code excluído com sucesso!");
+      onReset();
+    } catch (error) {
+      console.error('Erro ao excluir:', error);
+      toast.error("Erro ao excluir QR Code. Tente novamente.");
+    }
+  };
 
   const downloadQRCode = async (format: string) => {
     const svg = document.getElementById("qr-code");
@@ -113,6 +143,34 @@ export const PetQRCode = ({ petInfo, onReset }: PetQRCodeProps) => {
             </SelectContent>
           </Select>
         </div>
+        
+        <div className="grid grid-cols-2 gap-4">
+          <Button onClick={onEdit} variant="outline">
+            Editar
+          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive">
+                Excluir
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Tem certeza que deseja excluir este QR Code? Esta ação não pode ser desfeita.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDelete}>
+                  Confirmar
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+        
         <Button onClick={onReset} variant="outline" className="w-full">
           Gerar Novo QR Code
         </Button>
