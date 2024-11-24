@@ -2,14 +2,20 @@ import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MessageCircle, MapPin } from "lucide-react";
+import { MessageCircle, MapPin, AlertCircle } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface Location {
   latitude: number | null;
   longitude: number | null;
   city: string | null;
   country: string | null;
+  timestamp: string;
+}
+
+interface LocationHistory {
+  locations: Location[];
 }
 
 const PetInfo = () => {
@@ -20,45 +26,52 @@ const PetInfo = () => {
     longitude: null,
     city: null,
     country: null,
+    timestamp: new Date().toISOString(),
   });
+  const [locationHistory, setLocationHistory] = useState<LocationHistory>({ locations: [] });
+  const [isLoading, setIsLoading] = useState(true);
+
   const searchParams = new URLSearchParams(location.search);
   const encodedData = searchParams.get("data");
-  
+
   useEffect(() => {
-    const getLocation = () => {
+    const getLocation = async () => {
       if ("geolocation" in navigator) {
-        navigator.geolocation.getCurrentPosition(
-          async (position) => {
-            const { latitude, longitude } = position.coords;
-            try {
-              // Usando a API de geocodificação reversa do OpenStreetMap
-              const response = await fetch(
-                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
-              );
-              const data = await response.json();
-              
-              setUserLocation({
-                latitude,
-                longitude,
-                city: data.address.city || data.address.town,
-                country: data.address.country,
-              });
-            } catch (error) {
-              toast({
-                title: "Erro ao obter localização",
-                description: "Não foi possível determinar sua localização exata.",
-                variant: "destructive",
-              });
-            }
-          },
-          (error) => {
-            toast({
-              title: "Acesso à localização negado",
-              description: "Por favor, permita o acesso à sua localização para melhor ajuda.",
-              variant: "destructive",
-            });
-          }
-        );
+        try {
+          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject);
+          });
+
+          const { latitude, longitude } = position.coords;
+          
+          // Usando a API de geocodificação reversa do OpenStreetMap
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
+          );
+          const data = await response.json();
+          
+          const newLocation = {
+            latitude,
+            longitude,
+            city: data.address.city || data.address.town,
+            country: data.address.country,
+            timestamp: new Date().toISOString(),
+          };
+
+          setUserLocation(newLocation);
+          setLocationHistory(prev => ({
+            locations: [...prev.locations, newLocation]
+          }));
+
+        } catch (error) {
+          toast({
+            title: "Erro ao obter localização",
+            description: "Não foi possível determinar sua localização exata.",
+            variant: "destructive",
+          });
+        } finally {
+          setIsLoading(false);
+        }
       }
     };
 
@@ -71,6 +84,7 @@ const PetInfo = () => {
         <div className="container max-w-md mx-auto px-4">
           <Card>
             <CardContent className="p-6 text-center">
+              <AlertCircle className="mx-auto h-12 w-12 text-destructive mb-4" />
               <p className="text-lg text-muted-foreground">QR Code inválido</p>
             </CardContent>
           </Card>
@@ -82,13 +96,12 @@ const PetInfo = () => {
   const petInfo = JSON.parse(decodeURIComponent(encodedData));
 
   const handleWhatsAppClick = () => {
+    const locationText = userLocation.city 
+      ? ` na região de ${userLocation.city}, ${userLocation.country}`
+      : "";
     const whatsappUrl = `https://wa.me/${petInfo.phone.replace(/\D/g, "")}?text=Olá! Encontrei seu pet ${
       petInfo.petName
-    }${
-      userLocation.city
-        ? ` na região de ${userLocation.city}, ${userLocation.country}`
-        : ""
-    }!`;
+    }${locationText}!`;
     window.open(whatsappUrl, "_blank");
   };
 
@@ -111,6 +124,14 @@ const PetInfo = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6 p-6">
+            {isLoading && (
+              <Alert>
+                <AlertDescription>
+                  Obtendo sua localização...
+                </AlertDescription>
+              </Alert>
+            )}
+            
             <div className="grid gap-4">
               <div className="space-y-2">
                 <h3 className="font-semibold text-primary">Nome do Pet</h3>
