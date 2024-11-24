@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface PetInfo {
   petName: string;
@@ -25,15 +26,33 @@ export const PetForm = ({ onSubmit }: PetFormProps) => {
     phone: "",
     notes: "",
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.petName || !formData.ownerName || !formData.phone) {
       toast.error("Por favor, preencha todos os campos obrigatórios");
       return;
     }
-    onSubmit(formData);
-    toast.success("QR Code gerado com sucesso!");
+
+    setIsSubmitting(true);
+    try {
+      const { data, error } = await supabase
+        .from('pets')
+        .insert([formData])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      onSubmit(formData);
+      toast.success("QR Code gerado com sucesso!");
+    } catch (error) {
+      console.error('Erro ao salvar:', error);
+      toast.error("Erro ao gerar QR Code. Tente novamente.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -92,8 +111,8 @@ export const PetForm = ({ onSubmit }: PetFormProps) => {
         />
       </div>
 
-      <Button type="submit" className="w-full">
-        Gerar QR Code
+      <Button type="submit" className="w-full" disabled={isSubmitting}>
+        {isSubmitting ? "Gerando..." : "Gerar QR Code"}
       </Button>
     </form>
   );

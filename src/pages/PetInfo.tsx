@@ -1,25 +1,13 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MessageCircle, MapPin, AlertCircle } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Card, CardContent } from "@/components/ui/card";
 import { LocationHistory } from "@/components/LocationHistory";
-import { formatDistanceToNow } from "date-fns";
-import { ptBR } from "date-fns/locale";
-
-interface Location {
-  latitude: number | null;
-  longitude: number | null;
-  city: string | null;
-  country: string | null;
-  timestamp: string;
-}
-
-interface LocationHistory {
-  locations: Location[];
-}
+import { PetDetails } from "@/components/PetDetails";
+import { supabase } from "@/integrations/supabase/client";
+import type { Location, LocationHistory as LocationHistoryType } from "@/types/location";
 
 const PetInfo = () => {
   const location = useLocation();
@@ -31,11 +19,38 @@ const PetInfo = () => {
     country: null,
     timestamp: new Date().toISOString(),
   });
-  const [locationHistory, setLocationHistory] = useState<LocationHistory>({ locations: [] });
+  const [locationHistory, setLocationHistory] = useState<LocationHistoryType>({ locations: [] });
   const [isLoading, setIsLoading] = useState(true);
+  const [petInfo, setPetInfo] = useState<any>(null);
 
   const searchParams = new URLSearchParams(location.search);
-  const encodedData = searchParams.get("data");
+  const qrId = searchParams.get("qr_id");
+
+  useEffect(() => {
+    const fetchPetInfo = async () => {
+      if (!qrId) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('pets')
+          .select('*')
+          .eq('qr_id', qrId)
+          .single();
+
+        if (error) throw error;
+        setPetInfo(data);
+      } catch (error) {
+        console.error('Erro ao buscar informações:', error);
+        toast({
+          title: "Erro ao carregar informações",
+          description: "Não foi possível carregar as informações do pet.",
+          variant: "destructive",
+        });
+      }
+    };
+
+    fetchPetInfo();
+  }, [qrId, toast]);
 
   useEffect(() => {
     const getLocation = async () => {
@@ -47,7 +62,6 @@ const PetInfo = () => {
 
           const { latitude, longitude } = position.coords;
           
-          // Usando a API de geocodificação reversa do OpenStreetMap
           const response = await fetch(
             `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
           );
@@ -70,7 +84,6 @@ const PetInfo = () => {
             title: "Localização obtida com sucesso",
             description: `${newLocation.city}, ${newLocation.country}`,
           });
-
         } catch (error) {
           toast({
             title: "Erro ao obter localização",
@@ -86,7 +99,7 @@ const PetInfo = () => {
     getLocation();
   }, [toast]);
 
-  if (!encodedData) {
+  if (!qrId || !petInfo) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-background to-secondary/20 py-12">
         <div className="container max-w-md mx-auto px-4">
@@ -101,14 +114,12 @@ const PetInfo = () => {
     );
   }
 
-  const petInfo = JSON.parse(decodeURIComponent(encodedData));
-
   const handleWhatsAppClick = () => {
     const locationText = userLocation.city 
       ? ` na região de ${userLocation.city}, ${userLocation.country}`
       : "";
     const whatsappUrl = `https://wa.me/${petInfo.phone.replace(/\D/g, "")}?text=Olá! Encontrei seu pet ${
-      petInfo.petName
+      petInfo.pet_name
     }${locationText}!`;
     window.open(whatsappUrl, "_blank");
   };
@@ -123,86 +134,27 @@ const PetInfo = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-secondary/20 py-12">
       <div className="container max-w-md mx-auto px-4">
-        <Card className="shadow-lg">
-          <CardHeader className="border-b bg-primary/5">
-            <CardTitle className="text-2xl font-bold text-center text-primary">
-              Informações do Pet
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6 p-6">
-            {isLoading && (
-              <Alert>
-                <AlertDescription>
-                  Obtendo sua localização...
-                </AlertDescription>
-              </Alert>
-            )}
-            
-            <div className="grid gap-4">
-              <div className="space-y-2">
-                <h3 className="font-semibold text-primary">Nome do Pet</h3>
-                <p className="text-lg">{petInfo.petName}</p>
-              </div>
-              <div className="space-y-2">
-                <h3 className="font-semibold text-primary">Nome do Tutor</h3>
-                <p className="text-lg">{petInfo.ownerName}</p>
-              </div>
-              {petInfo.address && (
-                <div className="space-y-2">
-                  <h3 className="font-semibold text-primary">Endereço</h3>
-                  <p className="text-lg">{petInfo.address}</p>
-                </div>
-              )}
-              <div className="space-y-2">
-                <h3 className="font-semibold text-primary">Telefone</h3>
-                <p className="text-lg">{petInfo.phone}</p>
-              </div>
-              {petInfo.notes && (
-                <div className="space-y-2">
-                  <h3 className="font-semibold text-primary">Observações</h3>
-                  <p className="text-lg">{petInfo.notes}</p>
-                </div>
-              )}
-              {userLocation.city && (
-                <div className="space-y-2">
-                  <h3 className="font-semibold text-primary">Localização Atual</h3>
-                  <p className="text-lg">
-                    {userLocation.city}, {userLocation.country}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {formatDistanceToNow(new Date(userLocation.timestamp), {
-                      addSuffix: true,
-                      locale: ptBR,
-                    })}
-                  </p>
-                  <Button
-                    onClick={() => handleMapClick(userLocation.latitude!, userLocation.longitude!)}
-                    variant="outline"
-                    className="w-full mt-2"
-                  >
-                    <MapPin className="mr-2 h-5 w-5" />
-                    Ver no Mapa
-                  </Button>
-                </div>
-              )}
-            </div>
+        {isLoading && (
+          <Alert>
+            <AlertDescription>
+              Obtendo sua localização...
+            </AlertDescription>
+          </Alert>
+        )}
 
-            {locationHistory.locations.length > 1 && (
-              <LocationHistory
-                locations={locationHistory.locations}
-                onMapClick={handleMapClick}
-              />
-            )}
+        <PetDetails
+          petInfo={petInfo}
+          userLocation={userLocation}
+          onWhatsAppClick={handleWhatsAppClick}
+          onMapClick={handleMapClick}
+        />
 
-            <Button
-              onClick={handleWhatsAppClick}
-              className="w-full bg-green-500 hover:bg-green-600 h-12 text-lg"
-            >
-              <MessageCircle className="mr-2 h-5 w-5" />
-              Contatar via WhatsApp
-            </Button>
-          </CardContent>
-        </Card>
+        {locationHistory.locations.length > 1 && (
+          <LocationHistory
+            locations={locationHistory.locations}
+            onMapClick={handleMapClick}
+          />
+        )}
       </div>
     </div>
   );
