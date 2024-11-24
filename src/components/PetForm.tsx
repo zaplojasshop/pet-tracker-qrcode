@@ -39,7 +39,13 @@ export const PetForm = ({ onSubmit }: PetFormProps) => {
     try {
       const { data, error } = await supabase
         .from('pets')
-        .insert([formData])
+        .insert({
+          pet_name: formData.petName,
+          owner_name: formData.ownerName,
+          address: formData.address,
+          phone: formData.phone,
+          notes: formData.notes
+        })
         .select()
         .single();
 
