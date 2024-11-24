@@ -1,5 +1,6 @@
 import { QRCodeSVG } from "qrcode.react";
 import { Button } from "@/components/ui/button";
+import { v4 as uuidv4 } from 'uuid';
 import type { PetInfo } from "./PetForm";
 
 interface PetQRCodeProps {
@@ -9,7 +10,8 @@ interface PetQRCodeProps {
 
 export const PetQRCode = ({ petInfo, onReset }: PetQRCodeProps) => {
   const baseUrl = window.location.origin;
-  const encodedData = encodeURIComponent(JSON.stringify(petInfo));
+  const qrId = uuidv4();
+  const encodedData = encodeURIComponent(JSON.stringify({ ...petInfo, qrId }));
   const qrUrl = `${baseUrl}/pet-info?data=${encodedData}`;
 
   const downloadQRCode = () => {
