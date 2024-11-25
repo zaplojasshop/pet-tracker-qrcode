@@ -19,6 +19,7 @@ const Admin = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [newUserEmail, setNewUserEmail] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     checkAdmin();
@@ -26,27 +27,41 @@ const Admin = () => {
   }, []);
 
   const checkAdmin = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      navigate("/login");
-      return;
-    }
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        navigate("/login");
+        return;
+      }
 
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("is_admin")
-      .eq("id", user.id)
-      .single();
+      const { data: profiles, error } = await supabase
+        .from("profiles")
+        .select("is_admin")
+        .eq("id", user.id);
 
-    if (!profile?.is_admin) {
-      navigate("/");
+      if (error) throw error;
+
+      // Se não encontrou o perfil ou não é admin, redireciona
+      if (!profiles?.length || !profiles[0]?.is_admin) {
+        navigate("/");
+        toast({
+          title: "Acesso negado",
+          description: "Você não tem permissão para acessar esta página",
+          variant: "destructive",
+        });
+      } else {
+        setIsAdmin(true);
+      }
+    } catch (error: any) {
+      console.error("Erro ao verificar admin:", error);
       toast({
-        title: "Acesso negado",
-        description: "Você não tem permissão para acessar esta página",
+        title: "Erro",
+        description: "Ocorreu um erro ao verificar suas permissões",
         variant: "destructive",
       });
-    } else {
-      setIsAdmin(true);
+      navigate("/");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -88,6 +103,14 @@ const Admin = () => {
       });
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-background to-secondary/20 flex items-center justify-center">
+        <div className="text-center">Carregando...</div>
+      </div>
+    );
+  }
 
   if (!isAdmin) {
     return null;
