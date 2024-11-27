@@ -12,22 +12,57 @@ import Admin from "./pages/Admin";
 
 const queryClient = new QueryClient();
 
-const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
+const PrivateRoute = ({ children, requireAdmin = false }: { children: React.ReactNode, requireAdmin?: boolean }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const checkAuth = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("is_admin")
+          .eq("id", user.id)
+          .single();
+        
+        setIsAdmin(profile?.is_admin || false);
+      }
+      setIsAuthenticated(!!user);
+    };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       setIsAuthenticated(!!session);
+      if (session?.user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("is_admin")
+          .eq("id", session.user.id)
+          .single();
+        
+        setIsAdmin(profile?.is_admin || false);
+      } else {
+        setIsAdmin(false);
+      }
     });
 
+    checkAuth();
     return () => subscription.unsubscribe();
   }, []);
 
-  if (isAuthenticated === null) {
+  if (isAuthenticated === null || (requireAdmin && isAdmin === null)) {
     return null;
   }
 
-  return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+
+  if (requireAdmin && !isAdmin) {
+    return <Navigate to="/" />;
+  }
+
+  return <>{children}</>;
 };
 
 const App = () => (
@@ -50,7 +85,7 @@ const App = () => (
           <Route
             path="/admin/*"
             element={
-              <PrivateRoute>
+              <PrivateRoute requireAdmin>
                 <Admin />
               </PrivateRoute>
             }

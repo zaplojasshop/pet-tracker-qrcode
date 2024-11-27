@@ -26,7 +26,6 @@ const Admin = () => {
 
   useEffect(() => {
     checkAdmin();
-    fetchUsers();
   }, []);
 
   const checkAdmin = async () => {
@@ -40,19 +39,20 @@ const Admin = () => {
       const { data: profiles, error } = await supabase
         .from("profiles")
         .select("is_admin")
-        .eq("id", user.id);
+        .eq("id", user.id)
+        .single();
 
-      if (error) throw error;
-
-      if (!profiles?.length || !profiles[0]?.is_admin) {
-        navigate("/");
+      if (error || !profiles?.is_admin) {
         toast.error("Você não tem permissão para acessar esta página");
-      } else {
-        setIsAdmin(true);
+        navigate("/");
+        return;
       }
-    } catch (error: any) {
+
+      setIsAdmin(true);
+      fetchUsers();
+    } catch (error) {
       console.error("Erro ao verificar admin:", error);
-      toast.error("Ocorreu um erro ao verificar suas permissões");
+      toast.error("Erro ao verificar permissões");
       navigate("/");
     } finally {
       setIsLoading(false);
@@ -60,13 +60,32 @@ const Admin = () => {
   };
 
   const fetchUsers = async () => {
-    const { data: profiles } = await supabase
+    const { data: profiles, error } = await supabase
       .from("profiles")
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (profiles) {
-      setUsers(profiles);
+    if (error) {
+      toast.error("Erro ao carregar usuários");
+      return;
+    }
+
+    setUsers(profiles || []);
+  };
+
+  const toggleAdmin = async (userId: string, currentIsAdmin: boolean) => {
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ is_admin: !currentIsAdmin })
+        .eq("id", userId);
+
+      if (error) throw error;
+
+      toast.success("Permissões atualizadas com sucesso");
+      fetchUsers();
+    } catch (error) {
+      toast.error("Erro ao atualizar permissões");
     }
   };
 
@@ -153,8 +172,8 @@ const Admin = () => {
           </div>
 
           <div className="bg-white rounded-xl shadow-lg p-6">
-            <h2 className="text-xl font-semibold mb-4">Criar Novo Usuário</h2>
-            <form onSubmit={createUser} className="flex gap-4">
+            <h2 className="text-xl font-semibold mb-4">Gerenciar Usuários</h2>
+            <form onSubmit={createUser} className="flex gap-4 mb-6">
               <Input
                 type="email"
                 placeholder="Email do novo usuário"
@@ -164,30 +183,39 @@ const Admin = () => {
               />
               <Button type="submit">Criar Usuário</Button>
             </form>
-          </div>
 
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <h2 className="text-xl font-semibold mb-4">Usuários</h2>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Admin</TableHead>
-                  <TableHead>Criado em</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {users.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell>{user.email}</TableCell>
-                    <TableCell>{user.is_admin ? "Sim" : "Não"}</TableCell>
-                    <TableCell>
-                      {new Date(user.created_at).toLocaleDateString()}
-                    </TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Admin</TableHead>
+                    <TableHead>Criado em</TableHead>
+                    <TableHead>Ações</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {users.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell>{user.email}</TableCell>
+                      <TableCell>{user.is_admin ? "Sim" : "Não"}</TableCell>
+                      <TableCell>
+                        {new Date(user.created_at).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => toggleAdmin(user.id, user.is_admin)}
+                        >
+                          {user.is_admin ? "Remover Admin" : "Tornar Admin"}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         </div>
       </div>
