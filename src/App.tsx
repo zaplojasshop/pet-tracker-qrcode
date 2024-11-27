@@ -43,8 +43,9 @@ const PrivateRoute = ({ children, requireAdmin = false }: { children: React.Reac
       }
     };
 
+    checkAuth();
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      setIsAuthenticated(!!session);
       if (session?.user) {
         const { data: profile } = await supabase
           .from("profiles")
@@ -53,13 +54,14 @@ const PrivateRoute = ({ children, requireAdmin = false }: { children: React.Reac
           .single();
         
         setIsAdmin(profile?.is_admin || false);
+        setIsAuthenticated(true);
       } else {
+        setIsAuthenticated(false);
         setIsAdmin(false);
       }
       setIsLoading(false);
     });
 
-    checkAuth();
     return () => subscription.unsubscribe();
   }, []);
 
@@ -72,11 +74,11 @@ const PrivateRoute = ({ children, requireAdmin = false }: { children: React.Reac
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" />;
+    return <Navigate to="/login" replace />;
   }
 
   if (requireAdmin && !isAdmin) {
-    return <Navigate to="/" />;
+    return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;

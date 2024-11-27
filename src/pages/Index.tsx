@@ -12,6 +12,29 @@ const Index = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    const checkUserRole = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("is_admin")
+            .eq("id", user.id)
+            .single();
+          
+          setIsAdmin(profile?.is_admin || false);
+        } else {
+          setIsAdmin(false);
+          navigate("/login");
+        }
+      } catch (error) {
+        console.error("Error checking user role:", error);
+        toast.error("Erro ao verificar permissões do usuário");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
     checkUserRole();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -32,28 +55,6 @@ const Index = () => {
 
     return () => subscription.unsubscribe();
   }, [navigate]);
-
-  const checkUserRole = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("is_admin")
-          .eq("id", user.id)
-          .single();
-        
-        setIsAdmin(profile?.is_admin || false);
-      } else {
-        navigate("/login");
-      }
-    } catch (error) {
-      console.error("Error checking user role:", error);
-      toast.error("Erro ao verificar permissões do usuário");
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleLogout = async () => {
     try {
