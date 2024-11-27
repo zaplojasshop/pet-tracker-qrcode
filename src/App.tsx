@@ -24,7 +24,7 @@ const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   if (isAuthenticated === null) {
-    return null; // or loading spinner
+    return null;
   }
 
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
@@ -48,7 +48,7 @@ const App = () => (
             }
           />
           <Route
-            path="/admin"
+            path="/admin/*"
             element={
               <PrivateRoute>
                 <Admin />

@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { MessageCircle, MapPin } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import type { Location } from "@/types/location";
 
 interface PetDetailsProps {
@@ -13,6 +15,36 @@ interface PetDetailsProps {
 }
 
 export const PetDetails = ({ petInfo, userLocation, onWhatsAppClick, onMapClick }: PetDetailsProps) => {
+  useEffect(() => {
+    const saveLocation = async () => {
+      if (userLocation.latitude && userLocation.longitude) {
+        try {
+          await supabase.from('pet_locations').insert({
+            pet_id: petInfo.id,
+            latitude: userLocation.latitude,
+            longitude: userLocation.longitude,
+            city: userLocation.city,
+            country: userLocation.country
+          });
+
+          // Enviar mensagem automática via WhatsApp
+          const locationText = userLocation.city 
+            ? `Foi detectada uma localização do seu pet ${petInfo.pet_name} na região de ${userLocation.city}, ${userLocation.country}. `
+            : `Foi detectada uma nova localização do seu pet ${petInfo.pet_name}. `;
+          
+          const mapLink = `https://www.google.com/maps?q=${userLocation.latitude},${userLocation.longitude}`;
+          const message = `${locationText}Veja no mapa: ${mapLink}`;
+          const whatsappUrl = `https://wa.me/${petInfo.phone.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`;
+          window.open(whatsappUrl, "_blank");
+        } catch (error) {
+          console.error('Erro ao salvar localização:', error);
+        }
+      }
+    };
+
+    saveLocation();
+  }, [userLocation, petInfo]);
+
   return (
     <Card className="shadow-lg">
       <CardHeader className="border-b bg-primary/5">
@@ -21,6 +53,16 @@ export const PetDetails = ({ petInfo, userLocation, onWhatsAppClick, onMapClick 
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6 p-6">
+        {petInfo.photo_url && (
+          <div className="flex justify-center">
+            <img
+              src={petInfo.photo_url}
+              alt={petInfo.pet_name}
+              className="w-48 h-48 object-cover rounded-lg shadow-md"
+            />
+          </div>
+        )}
+
         {petInfo.reward > 0 && (
           <div className="bg-green-50 border-2 border-green-500 rounded-lg p-4 text-center animate-pulse">
             <h3 className="text-xl font-bold text-green-700 mb-1">Recompensa</h3>

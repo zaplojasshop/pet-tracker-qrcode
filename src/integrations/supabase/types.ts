@@ -9,6 +9,44 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      pet_locations: {
+        Row: {
+          city: string | null
+          country: string | null
+          created_at: string
+          id: string
+          latitude: number
+          longitude: number
+          pet_id: string | null
+        }
+        Insert: {
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          id?: string
+          latitude: number
+          longitude: number
+          pet_id?: string | null
+        }
+        Update: {
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          id?: string
+          latitude?: number
+          longitude?: number
+          pet_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pet_locations_pet_id_fkey"
+            columns: ["pet_id"]
+            isOneToOne: false
+            referencedRelation: "pets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pets: {
         Row: {
           address: string | null
@@ -18,6 +56,7 @@ export type Database = {
           owner_name: string
           pet_name: string
           phone: string
+          photo_url: string | null
           qr_id: string
           reward: number | null
           updated_at: string
@@ -30,6 +69,7 @@ export type Database = {
           owner_name: string
           pet_name: string
           phone: string
+          photo_url?: string | null
           qr_id?: string
           reward?: number | null
           updated_at?: string
@@ -42,6 +82,7 @@ export type Database = {
           owner_name?: string
           pet_name?: string
           phone?: string
+          photo_url?: string | null
           qr_id?: string
           reward?: number | null
           updated_at?: string

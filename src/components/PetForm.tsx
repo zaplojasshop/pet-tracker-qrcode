@@ -15,6 +15,7 @@ export interface PetInfo {
   reward?: number;
   qr_id?: string;
   id?: string;
+  photo_url?: string;
 }
 
 interface PetFormProps {
@@ -33,6 +34,31 @@ export const PetForm = ({ onSubmit, initialData, isEditing = false }: PetFormPro
     reward: 0,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setPhotoFile(e.target.files[0]);
+    }
+  };
+
+  const uploadPhoto = async (file: File): Promise<string | null> => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${crypto.randomUUID()}.${fileExt}`;
+    const { error: uploadError, data } = await supabase.storage
+      .from('pet_photos')
+      .upload(fileName, file);
+
+    if (uploadError) {
+      throw uploadError;
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('pet_photos')
+      .getPublicUrl(fileName);
+
+    return publicUrl;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,6 +69,11 @@ export const PetForm = ({ onSubmit, initialData, isEditing = false }: PetFormPro
 
     setIsSubmitting(true);
     try {
+      let photoUrl = formData.photo_url;
+      if (photoFile) {
+        photoUrl = await uploadPhoto(photoFile);
+      }
+
       if (isEditing && formData.id) {
         const { data, error } = await supabase
           .from('pets')
@@ -52,7 +83,8 @@ export const PetForm = ({ onSubmit, initialData, isEditing = false }: PetFormPro
             address: formData.address,
             phone: formData.phone,
             notes: formData.notes,
-            reward: formData.reward || 0
+            reward: formData.reward || 0,
+            photo_url: photoUrl
           })
           .eq('id', formData.id)
           .select()
@@ -61,7 +93,8 @@ export const PetForm = ({ onSubmit, initialData, isEditing = false }: PetFormPro
         if (error) throw error;
         onSubmit({
           ...formData,
-          qr_id: data.qr_id
+          qr_id: data.qr_id,
+          photo_url: photoUrl
         });
         toast.success("Informações atualizadas com sucesso!");
       } else {
@@ -73,7 +106,8 @@ export const PetForm = ({ onSubmit, initialData, isEditing = false }: PetFormPro
             address: formData.address,
             phone: formData.phone,
             notes: formData.notes,
-            reward: formData.reward || 0
+            reward: formData.reward || 0,
+            photo_url: photoUrl
           })
           .select()
           .single();
@@ -81,7 +115,8 @@ export const PetForm = ({ onSubmit, initialData, isEditing = false }: PetFormPro
         if (error) throw error;
         onSubmit({
           ...formData,
-          qr_id: data.qr_id
+          qr_id: data.qr_id,
+          photo_url: photoUrl
         });
         toast.success("QR Code gerado com sucesso!");
       }
@@ -95,6 +130,24 @@ export const PetForm = ({ onSubmit, initialData, isEditing = false }: PetFormPro
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="space-y-2">
+        <Label htmlFor="photo">Foto do Pet</Label>
+        <Input
+          id="photo"
+          type="file"
+          accept="image/*"
+          onChange={handlePhotoChange}
+          className="cursor-pointer"
+        />
+        {formData.photo_url && (
+          <img 
+            src={formData.photo_url} 
+            alt="Pet" 
+            className="w-32 h-32 object-cover rounded-lg mt-2"
+          />
+        )}
+      </div>
+
       <div className="space-y-2">
         <Label htmlFor="petName">Nome do Pet *</Label>
         <Input
