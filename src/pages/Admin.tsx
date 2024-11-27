@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import {
   Table,
@@ -14,11 +13,11 @@ import {
 } from "@/components/ui/table";
 import { PetForm } from "@/components/PetForm";
 import { PetList } from "@/components/PetList";
+import { CreateUserForm } from "@/components/admin/CreateUserForm";
 
 const Admin = () => {
   const navigate = useNavigate();
   const [users, setUsers] = useState<any[]>([]);
-  const [newUserEmail, setNewUserEmail] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showPetForm, setShowPetForm] = useState(false);
@@ -89,36 +88,6 @@ const Admin = () => {
     }
   };
 
-  const createUser = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    try {
-      const { data, error } = await supabase.auth.admin.createUser({
-        email: newUserEmail,
-        password: Math.random().toString(36).slice(-8),
-        email_confirm: true,
-      });
-
-      if (error) throw error;
-
-      toast.success("Um email será enviado com as instruções de acesso");
-      setNewUserEmail("");
-      fetchUsers();
-    } catch (error: any) {
-      toast.error(error.message);
-    }
-  };
-
-  const handlePetSubmit = () => {
-    setShowPetForm(false);
-    setSelectedPet(null);
-  };
-
-  const handlePetEdit = (pet: any) => {
-    setSelectedPet(pet);
-    setShowPetForm(true);
-  };
-
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-background to-secondary/20 flex items-center justify-center">
@@ -138,6 +107,11 @@ const Admin = () => {
 
         <div className="grid grid-cols-1 gap-8">
           <div className="bg-white rounded-xl shadow-lg p-6">
+            <h2 className="text-xl font-semibold mb-6">Criar Novo Usuário</h2>
+            <CreateUserForm />
+          </div>
+
+          <div className="bg-white rounded-xl shadow-lg p-6">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-semibold">Gerenciar Pets</h2>
               <Button onClick={() => setShowPetForm(true)} disabled={showPetForm}>
@@ -151,7 +125,10 @@ const Admin = () => {
                   {selectedPet ? "Editar Pet" : "Novo Pet"}
                 </h3>
                 <PetForm
-                  onSubmit={handlePetSubmit}
+                  onSubmit={() => {
+                    setShowPetForm(false);
+                    setSelectedPet(null);
+                  }}
                   initialData={selectedPet}
                   isEditing={!!selectedPet}
                 />
@@ -167,23 +144,15 @@ const Admin = () => {
                 </Button>
               </div>
             ) : (
-              <PetList onEdit={handlePetEdit} />
+              <PetList onEdit={(pet) => {
+                setSelectedPet(pet);
+                setShowPetForm(true);
+              }} />
             )}
           </div>
 
           <div className="bg-white rounded-xl shadow-lg p-6">
             <h2 className="text-xl font-semibold mb-4">Gerenciar Usuários</h2>
-            <form onSubmit={createUser} className="flex gap-4 mb-6">
-              <Input
-                type="email"
-                placeholder="Email do novo usuário"
-                value={newUserEmail}
-                onChange={(e) => setNewUserEmail(e.target.value)}
-                required
-              />
-              <Button type="submit">Criar Usuário</Button>
-            </form>
-
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
