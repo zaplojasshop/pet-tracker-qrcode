@@ -15,20 +15,32 @@ const queryClient = new QueryClient();
 const PrivateRoute = ({ children, requireAdmin = false }: { children: React.ReactNode, requireAdmin?: boolean }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("is_admin")
-          .eq("id", user.id)
-          .single();
-        
-        setIsAdmin(profile?.is_admin || false);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("is_admin")
+            .eq("id", user.id)
+            .single();
+          
+          setIsAdmin(profile?.is_admin || false);
+          setIsAuthenticated(true);
+        } else {
+          setIsAuthenticated(false);
+          setIsAdmin(false);
+        }
+      } catch (error) {
+        console.error("Error checking auth:", error);
+        setIsAuthenticated(false);
+        setIsAdmin(false);
+      } finally {
+        setIsLoading(false);
       }
-      setIsAuthenticated(!!user);
     };
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -44,14 +56,19 @@ const PrivateRoute = ({ children, requireAdmin = false }: { children: React.Reac
       } else {
         setIsAdmin(false);
       }
+      setIsLoading(false);
     });
 
     checkAuth();
     return () => subscription.unsubscribe();
   }, []);
 
-  if (isAuthenticated === null || (requireAdmin && isAdmin === null)) {
-    return null;
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-lg">Carregando...</div>
+      </div>
+    );
   }
 
   if (!isAuthenticated) {
@@ -73,7 +90,14 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
-          <Route path="/pet-info" element={<PetInfo />} />
+          <Route
+            path="/pet-info"
+            element={
+              <PrivateRoute>
+                <PetInfo />
+              </PrivateRoute>
+            }
+          />
           <Route
             path="/"
             element={

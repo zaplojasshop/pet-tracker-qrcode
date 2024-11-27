@@ -1,38 +1,68 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { PetList } from "@/components/PetList";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { PetList } from "@/components/PetList";
 import type { PetInfo } from "@/components/PetForm";
 
 const Index = () => {
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     checkUserRole();
-  }, []);
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("is_admin")
+          .eq("id", session.user.id)
+          .single();
+        
+        setIsAdmin(profile?.is_admin || false);
+      } else {
+        setIsAdmin(false);
+        navigate("/login");
+      }
+      setIsLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
 
   const checkUserRole = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("is_admin")
-        .eq("id", user.id)
-        .single();
-      
-      setIsAdmin(profile?.is_admin || false);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("is_admin")
+          .eq("id", user.id)
+          .single();
+        
+        setIsAdmin(profile?.is_admin || false);
+      } else {
+        navigate("/login");
+      }
+    } catch (error) {
+      console.error("Error checking user role:", error);
+      toast.error("Erro ao verificar permissões do usuário");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      toast.error("Erro ao fazer logout");
-    } else {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
       navigate("/login");
+    } catch (error) {
+      console.error("Error:", error);
+      toast.error("Erro ao fazer logout");
     }
   };
 
@@ -40,8 +70,12 @@ const Index = () => {
     navigate("/pet-info", { state: { pet } });
   };
 
-  if (isAdmin === null) {
-    return <div>Carregando...</div>;
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-lg">Carregando...</div>
+      </div>
+    );
   }
 
   return (
