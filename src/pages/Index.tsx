@@ -4,6 +4,7 @@ import { PetList } from "@/components/PetList";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import type { PetInfo } from "@/components/PetForm";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -33,6 +34,10 @@ const Index = () => {
     } else {
       navigate("/login");
     }
+  };
+
+  const handleEditPet = (pet: PetInfo) => {
+    navigate("/pet-info", { state: { pet } });
   };
 
   if (isAdmin === null) {
@@ -67,7 +72,7 @@ const Index = () => {
           {isAdmin && (
             <div className="bg-white rounded-xl shadow-lg p-6">
               <h2 className="text-xl font-semibold mb-6">Lista de Pets</h2>
-              <PetList />
+              <PetList onEdit={handleEditPet} />
             </div>
           )}
         </div>
